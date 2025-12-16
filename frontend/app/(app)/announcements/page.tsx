@@ -1,6 +1,6 @@
 import { NotificationList } from "@/components/animate-ui/components/community/notification-list"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
-import { mockNotifications } from "@/components/dashboard/DashboardPanels"
+import { mockNotifications } from "@/lib/mock-data"
 import { requireUser } from "@/lib/auth"
 import { requireSelectedOrg } from "@/lib/org"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -75,5 +75,6 @@ export default async function AnnouncementsPage() {
     </main>
   )
 }
+
 
 
