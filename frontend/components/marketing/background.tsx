@@ -1,3 +1,5 @@
+'use client';
+
 import { Motion } from "./motion";
 import { cn } from "@/lib/utils";
 
