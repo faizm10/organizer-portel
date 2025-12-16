@@ -1,6 +1,6 @@
 import { PlayfulTodolist } from "@/components/animate-ui/components/community/playful-todolist"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
-import { mockTasks } from "@/components/dashboard/DashboardPanels"
+import { mockTasks } from "@/lib/mock-data"
 import { requireUser } from "@/lib/auth"
 import { requireSelectedOrg } from "@/lib/org"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -73,5 +73,6 @@ export default async function TasksPage() {
     </main>
   )
 }
+
 
 
