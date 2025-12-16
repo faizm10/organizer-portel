@@ -56,10 +56,23 @@ async function verifyOrgMembership(
 }
 
 /**
- * Gets the currently selected organization ID from cookie.
+ * Gets the currently selected organization ID from cookie or provided parameter.
  * Throws if no org is selected or user is not a member.
  */
-async function getCurrentOrgId(userId: string): Promise<string> {
+async function getCurrentOrgId(
+  userId: string,
+  providedOrgId?: string
+): Promise<string> {
+  // If orgId is provided, verify membership and use it
+  if (providedOrgId) {
+    const isMember = await verifyOrgMembership(userId, providedOrgId);
+    if (!isMember) {
+      throw new Error("Not a member of the selected organization");
+    }
+    return providedOrgId;
+  }
+
+  // Otherwise, try to get from cookie
   const orgId = await getSelectedOrgIdFromCookie();
   if (!orgId) {
     throw new Error("No organization selected");
@@ -75,18 +88,19 @@ async function getCurrentOrgId(userId: string): Promise<string> {
 
 /**
  * Lists all tasks for the current organization.
+ * @param orgId Optional organization ID. If not provided, reads from cookie.
  */
-export async function listTasks(): Promise<ActionResult<Task[]>> {
+export async function listTasks(orgId?: string): Promise<ActionResult<Task[]>> {
   try {
     const user = await requireUser();
-    const orgId = await getCurrentOrgId(user.id);
+    const resolvedOrgId = await getCurrentOrgId(user.id, orgId);
 
     const supabase = await createClient();
 
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
-      .eq("org_id", orgId)
+      .eq("org_id", resolvedOrgId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -105,11 +119,16 @@ export async function listTasks(): Promise<ActionResult<Task[]>> {
 
 /**
  * Gets a single task by ID.
+ * @param taskId The task ID to fetch.
+ * @param orgId Optional organization ID. If not provided, reads from cookie.
  */
-export async function getTask(taskId: string): Promise<ActionResult<Task>> {
+export async function getTask(
+  taskId: string,
+  orgId?: string
+): Promise<ActionResult<Task>> {
   try {
     const user = await requireUser();
-    const orgId = await getCurrentOrgId(user.id);
+    const resolvedOrgId = await getCurrentOrgId(user.id, orgId);
 
     const supabase = await createClient();
 
@@ -117,7 +136,7 @@ export async function getTask(taskId: string): Promise<ActionResult<Task>> {
       .from("tasks")
       .select("*")
       .eq("id", taskId)
-      .eq("org_id", orgId)
+      .eq("org_id", resolvedOrgId)
       .single();
 
     if (error) {
@@ -138,13 +157,16 @@ export async function getTask(taskId: string): Promise<ActionResult<Task>> {
 
 /**
  * Creates a new task in the current organization.
+ * @param input Task creation data.
+ * @param orgId Optional organization ID. If not provided, reads from cookie.
  */
 export async function createTask(
-  input: CreateTaskInput
+  input: CreateTaskInput,
+  orgId?: string
 ): Promise<ActionResult<Task>> {
   try {
     const user = await requireUser();
-    const orgId = await getCurrentOrgId(user.id);
+    const resolvedOrgId = await getCurrentOrgId(user.id, orgId);
 
     // Validation
     if (!input.title || input.title.trim().length === 0) {
@@ -183,7 +205,10 @@ export async function createTask(
 
     // Validate assigned_to if provided (must be org member)
     if (input.assigned_to) {
-      const isMember = await verifyOrgMembership(input.assigned_to, orgId);
+      const isMember = await verifyOrgMembership(
+        input.assigned_to,
+        resolvedOrgId
+      );
       if (!isMember) {
         return {
           success: false,
@@ -197,7 +222,7 @@ export async function createTask(
     const { data, error } = await supabase
       .from("tasks")
       .insert({
-        org_id: orgId,
+        org_id: resolvedOrgId,
         title: input.title.trim(),
         description: input.description?.trim() || null,
         status: input.status || "todo",
@@ -231,17 +256,21 @@ export async function createTask(
 
 /**
  * Updates an existing task.
+ * @param taskId The task ID to update.
+ * @param input Task update data.
+ * @param orgId Optional organization ID. If not provided, reads from cookie.
  */
 export async function updateTask(
   taskId: string,
-  input: UpdateTaskInput
+  input: UpdateTaskInput,
+  orgId?: string
 ): Promise<ActionResult<Task>> {
   try {
     const user = await requireUser();
-    const orgId = await getCurrentOrgId(user.id);
+    const resolvedOrgId = await getCurrentOrgId(user.id, orgId);
 
     // First verify the task exists and belongs to the org
-    const taskResult = await getTask(taskId);
+    const taskResult = await getTask(taskId, resolvedOrgId);
     if (!taskResult.success) {
       return taskResult;
     }
@@ -288,7 +317,10 @@ export async function updateTask(
 
     // Validate assigned_to if provided
     if (input.assigned_to !== undefined && input.assigned_to !== null) {
-      const isMember = await verifyOrgMembership(input.assigned_to, orgId);
+      const isMember = await verifyOrgMembership(
+        input.assigned_to,
+        resolvedOrgId
+      );
       if (!isMember) {
         return {
           success: false,
@@ -313,7 +345,7 @@ export async function updateTask(
       .from("tasks")
       .update(updateData)
       .eq("id", taskId)
-      .eq("org_id", orgId)
+      .eq("org_id", resolvedOrgId)
       .select()
       .single();
 
@@ -339,14 +371,19 @@ export async function updateTask(
 
 /**
  * Deletes a task.
+ * @param taskId The task ID to delete.
+ * @param orgId Optional organization ID. If not provided, reads from cookie.
  */
-export async function deleteTask(taskId: string): Promise<ActionResult<void>> {
+export async function deleteTask(
+  taskId: string,
+  orgId?: string
+): Promise<ActionResult<void>> {
   try {
     const user = await requireUser();
-    const orgId = await getCurrentOrgId(user.id);
+    const resolvedOrgId = await getCurrentOrgId(user.id, orgId);
 
     // First verify the task exists and belongs to the org
-    const taskResult = await getTask(taskId);
+    const taskResult = await getTask(taskId, resolvedOrgId);
     if (!taskResult.success) {
       return taskResult;
     }
@@ -357,7 +394,7 @@ export async function deleteTask(taskId: string): Promise<ActionResult<void>> {
       .from("tasks")
       .delete()
       .eq("id", taskId)
-      .eq("org_id", orgId);
+      .eq("org_id", resolvedOrgId);
 
     if (error) {
       return {
