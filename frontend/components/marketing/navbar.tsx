@@ -42,12 +42,11 @@ export function Navbar({ className }: { className?: string }) {
             <Button
               variant="ghost"
               className="hidden h-9 px-3 text-xs md:inline-flex"
-              asChild={false}
             >
-              <Link href="/login">Log in</Link>
+              <Link href="/auth/login">Log in</Link>
             </Button>
             <Button className="h-9 rounded-full px-4 text-xs sm:px-5">
-              <Link href="/signup" className="flex items-center gap-1">
+              <Link href="/auth/sign-up" className="flex items-center gap-1">
                 <span>Start free</span>
               </Link>
             </Button>

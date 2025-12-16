@@ -37,7 +37,7 @@ export function Hero() {
         <MotionDiv delay={0.1} className="flex flex-col gap-3 pt-1 sm:flex-row">
           <div className="flex gap-2">
             <Button className="h-10 rounded-full px-5 text-sm sm:h-11 sm:px-6">
-              <Link href="/signup">Start free</Link>
+              <Link href="/auth/sign-up">Start free</Link>
             </Button>
             <Button
               variant="outline"

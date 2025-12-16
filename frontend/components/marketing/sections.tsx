@@ -819,13 +819,13 @@ export function FAQSection() {
 export function FinalCTASection() {
   return (
     <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16">
-      <MotionDiv className="overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-r from-foreground via-foreground to-foreground/90 px-5 py-7 text-foreground shadow-lg sm:px-8 sm:py-9">
+      <MotionDiv className="overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-r from-foreground via-foreground to-foreground/90 px-5 py-7 text-background shadow-lg sm:px-8 sm:py-9">
         <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2 text-foreground">
+          <div className="space-y-2 text-background">
             <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
               Your next event deserves better tooling.
             </h2>
-            <p className="max-w-xl text-sm text-foreground/80">
+            <p className="max-w-xl text-sm text-background/80">
               Give your organizing team a calm control room instead of a dozen
               tabs. HackPortal is the workspace built for the one weekend that
               has to run right.
@@ -833,13 +833,13 @@ export function FinalCTASection() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button className="h-9 rounded-full bg-background px-4 text-xs font-medium text-foreground hover:bg-background/90">
-              Start free
+              <a href="/auth/sign-up">Start free</a>
             </Button>
             <Button
               variant="outline"
               className="h-9 rounded-full border-background/40 bg-transparent px-4 text-xs font-medium text-foreground hover:bg-background/10"
             >
-              Talk to us
+              <a href="/contact">Talk to us</a>
             </Button>
           </div>
         </div>
