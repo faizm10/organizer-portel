@@ -2,7 +2,7 @@ import * as React from "react";
 import { Users, Network, ClipboardList, Megaphone, Shield, Timer, CalendarClock, RadioTower } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionItem } from "@/components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { MotionDiv, MotionFade } from "./motion";
@@ -39,7 +39,7 @@ export function ProblemSolutionSection() {
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
         <MotionDiv className="space-y-4 rounded-3xl border border-border/70 bg-card/80 p-6 shadow-sm backdrop-blur-sm">
-          <Badge variant="subtle" className="mb-1">
+          <Badge variant="secondary" className="mb-1">
             Before HackPortal
           </Badge>
           <h2 className="text-lg font-semibold tracking-tight">
@@ -165,7 +165,7 @@ export function FeaturesGridSection() {
     <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16">
       <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
         <MotionDiv className="space-y-2">
-          <Badge variant="subtle">Features</Badge>
+          <Badge variant="secondary">Features</Badge>
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
             Everything your organizing team touches—under one roof.
           </h2>
@@ -218,7 +218,7 @@ export function ProductMockSection() {
     >
       <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
         <MotionDiv className="space-y-1">
-          <Badge variant="subtle">Live demo</Badge>
+          <Badge variant="secondary">Live demo</Badge>
           <h2
             id="demo-heading"
             className="text-lg font-semibold tracking-tight sm:text-xl"
@@ -518,7 +518,7 @@ export function SecuritySection() {
     >
       <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr] lg:items-start">
         <MotionDiv className="space-y-3">
-          <Badge variant="subtle">Security & trust</Badge>
+          <Badge variant="secondary">Security & trust</Badge>
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
             Built for events that handle real data, not just pizza orders.
           </h2>
@@ -643,7 +643,7 @@ export function PricingSection() {
     >
       <div className="mb-6 flex flex-col gap-2 text-center sm:mb-8">
         <MotionDiv className="space-y-2">
-          <Badge variant="subtle">Pricing</Badge>
+          <Badge variant="secondary">Pricing</Badge>
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
             Simple per-event pricing for seasonal teams.
           </h2>
@@ -738,7 +738,7 @@ export function TestimonialsSection() {
   return (
     <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6 lg:px-8 lg:pb-20">
       <MotionDiv className="mb-6 space-y-2 text-center sm:mb-8">
-        <Badge variant="subtle">Testimonials</Badge>
+        <Badge variant="secondary">Testimonials</Badge>
         <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
           Loved by teams that know show weekend is game day.
         </h2>
@@ -797,7 +797,7 @@ export function FAQSection() {
     >
       <div className="mb-5 flex flex-col gap-2 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
         <MotionDiv className="space-y-2">
-          <Badge variant="subtle">FAQ</Badge>
+          <Badge variant="secondary">FAQ</Badge>
           <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
             Answers for organizers who ask the sharp questions.
           </h2>
@@ -806,8 +806,9 @@ export function FAQSection() {
       <MotionFade>
         <Accordion type="multiple" defaultValue={["0"]}>
           {faqs.map((faq, index) => (
-            <AccordionItem key={faq.q} value={String(index)} trigger={faq.q}>
-              {faq.a}
+            <AccordionItem key={faq.q} value={String(index)}>
+              <AccordionTrigger>{faq.q}</AccordionTrigger>
+              <AccordionContent>{faq.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
