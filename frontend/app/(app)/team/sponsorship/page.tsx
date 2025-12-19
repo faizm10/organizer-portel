@@ -5,20 +5,22 @@ import { listTasks } from "@/lib/tasks";
 import { CreateTaskForm } from "@/components/create-task-form";
 import { TasksPageContent } from "@/components/tasks-page-content";
 import { TeamResources } from "@/components/team-resources";
-import { TEAM_RESOURCES } from "@/lib/team-resources";
+import { listTeamResources } from "@/lib/team-resources-db";
 
 export default async function SponsorshipTeamPage() {
   const user = await requireUser();
   const membership = await requireSelectedOrg(user);
   const org = membership.organization;
 
-  // Fetch tasks filtered by sponsorship team and org members in parallel
-  const [tasksResult, orgMembers] = await Promise.all([
+  // Fetch tasks filtered by sponsorship team, org members, and team resources in parallel
+  const [tasksResult, orgMembers, resourcesResult] = await Promise.all([
     listTasks(org.id, "sponsorship"),
     getOrgMembers(org.id),
+    listTeamResources("sponsorship", org.id),
   ]);
 
   const tasks = tasksResult.success ? tasksResult.data : [];
+  const resources = resourcesResult.success ? resourcesResult.data : [];
 
   return (
     <main className="mx-auto flex min-h-svh max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -46,7 +48,12 @@ export default async function SponsorshipTeamPage() {
           </div>
         )}
 
-        <TeamResources resources={TEAM_RESOURCES.sponsorship} teamName="Sponsorship" />
+        <TeamResources
+          resources={resources}
+          team="sponsorship"
+          teamName="Sponsorship"
+          orgId={org.id}
+        />
       </section>
     </main>
   );
