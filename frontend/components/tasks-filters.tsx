@@ -4,6 +4,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { X } from "lucide-react";
 import type { TaskStatus, TaskPriority } from "@/lib/tasks";
 import type { OrgMember } from "@/lib/org";
@@ -47,14 +54,24 @@ export function TasksFilters({ filters, onFiltersChange, orgMembers }: TasksFilt
     onFiltersChange(newFilters);
   };
 
-  const handleAssignedToToggle = (userId: string) => {
-    const newAssignedTo = localFilters.assignedTo.includes(userId)
-      ? localFilters.assignedTo.filter((id) => id !== userId)
-      : [...localFilters.assignedTo, userId];
-    const newFilters = { ...localFilters, assignedTo: newAssignedTo };
-    setLocalFilters(newFilters);
-    onFiltersChange(newFilters);
+  const handleAssignedToChange = (value: string) => {
+    // If "all" is selected, clear the filter
+    if (value === "__all__") {
+      const newFilters = { ...localFilters, assignedTo: [] };
+      setLocalFilters(newFilters);
+      onFiltersChange(newFilters);
+    } else {
+      // Set single selection (dropdown only allows one selection)
+      const newFilters = { ...localFilters, assignedTo: [value] };
+      setLocalFilters(newFilters);
+      onFiltersChange(newFilters);
+    }
   };
+
+  // Get the current selected value for the dropdown (single selection)
+  const selectedAssignedTo = localFilters.assignedTo.length > 0 
+    ? localFilters.assignedTo[0] 
+    : "__all__";
 
   const handleSearchChange = (query: string) => {
     const newFilters = { ...localFilters, searchQuery: query };
@@ -143,31 +160,23 @@ export function TasksFilters({ filters, onFiltersChange, orgMembers }: TasksFilt
           })}
         </div>
 
-        {/* Assigned To Filters */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Assigned To Filter */}
+        <div className="flex items-center gap-1.5">
           <span className="text-sm text-muted-foreground mr-1">Assigned:</span>
-          <Button
-            variant={localFilters.assignedTo.includes("__unassigned__") ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleAssignedToToggle("__unassigned__")}
-            className="h-8"
-          >
-            Unassigned
-          </Button>
-          {orgMembers.map((member) => {
-            const isActive = localFilters.assignedTo.includes(member.user_id);
-            return (
-              <Button
-                key={member.user_id}
-                variant={isActive ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleAssignedToToggle(member.user_id)}
-                className="h-8"
-              >
-                {member.profile.full_name || member.user_id}
-              </Button>
-            );
-          })}
+          <Select value={selectedAssignedTo} onValueChange={handleAssignedToChange}>
+            <SelectTrigger className="h-8 w-[180px]">
+              <SelectValue placeholder="All members" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All members</SelectItem>
+              <SelectItem value="__unassigned__">Unassigned</SelectItem>
+              {orgMembers.map((member) => (
+                <SelectItem key={member.user_id} value={member.user_id}>
+                  {member.profile.full_name || member.user_id}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
