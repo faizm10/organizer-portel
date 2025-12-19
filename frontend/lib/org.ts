@@ -24,30 +24,90 @@ export type OrgMembership = {
 export async function getUserOrganizations(
   userId: string
 ): Promise<OrgMembership[]> {
+  console.log("[getUserOrganizations] Starting lookup for userId:", userId);
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("org_members")
-    .select("org_id, role, organization:organizations(id, name, slug)")
-    .eq("user_id", userId);
+  // Use RPC function to bypass RLS recursion issues
+  // This function uses SECURITY DEFINER to avoid RLS policy recursion
+  const { data, error } = await supabase.rpc("get_user_organizations", {
+    p_user_id: userId,
+  });
 
   if (error) {
-    // In a real app you might want to log this.
+    console.error("[getUserOrganizations] Error calling RPC function:", {
+      error,
+      errorCode: error.code,
+      errorMessage: error.message,
+      errorDetails: error.details,
+      userId,
+    });
+    
+    // Fallback: Try the direct query approach (might still fail with recursion)
+    console.log("[getUserOrganizations] Falling back to direct query...");
+    const { data: membershipsData, error: membershipsError } = await supabase
+      .from("org_members")
+      .select("org_id, role")
+      .eq("user_id", userId);
+
+    if (membershipsError) {
+      console.error("[getUserOrganizations] Fallback query also failed:", {
+        error: membershipsError,
+        userId,
+      });
+      return [];
+    }
+
+    if (!membershipsData || membershipsData.length === 0) {
+      console.log("[getUserOrganizations] No memberships found");
+      return [];
+    }
+
+    // Fetch organizations separately for fallback
+    const orgIds = membershipsData.map((m) => m.org_id);
+    const { data: orgsData } = await supabase
+      .from("organizations")
+      .select("id, name, slug")
+      .in("id", orgIds);
+
+    const orgMap = new Map((orgsData || []).map((org) => [org.id, org]));
+
+    return membershipsData.map((membership) => {
+      const org = orgMap.get(membership.org_id) || {
+        id: membership.org_id,
+        name: null,
+        slug: null,
+      };
+      return {
+        org_id: membership.org_id,
+        role: membership.role,
+        organization: org,
+      };
+    }) as OrgMembership[];
+  }
+
+  if (!data || data.length === 0) {
+    console.log("[getUserOrganizations] No memberships found via RPC");
     return [];
   }
 
-  if (!data) {
-    return [];
-  }
-
-  // Transform the data to match OrgMembership type
-  return data.map((item: any) => ({
-    org_id: item.org_id,
-    role: item.role,
-    organization: Array.isArray(item.organization) && item.organization.length > 0
-      ? item.organization[0]
-      : item.organization,
+  // Transform RPC result to OrgMembership format
+  const transformed = data.map((row: any) => ({
+    org_id: row.org_id,
+    role: row.role,
+    organization: {
+      id: row.org_id,
+      name: row.org_name || null,
+      slug: row.org_slug || null,
+    },
   })) as OrgMembership[];
+
+  console.log("[getUserOrganizations] Success via RPC:", {
+    memberships: transformed,
+    count: transformed.length,
+    userId,
+  });
+
+  return transformed;
 }
 
 /**
@@ -78,9 +138,29 @@ export async function setSelectedOrgIdInCookie(orgId: string) {
  * the user has no memberships, redirects to the appropriate route.
  */
 export async function requireSelectedOrg(user: AuthenticatedUser) {
+  console.log("[requireSelectedOrg] Starting check for user:", {
+    userId: user.id,
+    userEmail: user.email,
+  });
+
   const memberships = await getUserOrganizations(user.id);
 
+  console.log("[requireSelectedOrg] Memberships found:", {
+    count: memberships.length,
+    memberships: memberships.map((m) => ({
+      org_id: m.org_id,
+      role: m.role,
+      orgName: m.organization?.name,
+      orgSlug: m.organization?.slug,
+    })),
+    userId: user.id,
+  });
+
   if (memberships.length === 0) {
+    console.log("[requireSelectedOrg] No memberships found, redirecting to /join", {
+      userId: user.id,
+      userEmail: user.email,
+    });
     redirect("/join");
   }
 
