@@ -47,7 +47,12 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/select-org') ||
     pathname.startsWith('/join') ||
-    pathname.startsWith('/protected')
+    pathname.startsWith('/protected') ||
+    pathname.startsWith('/tasks') ||
+    pathname.startsWith('/announcements') ||
+    pathname.startsWith('/people') ||
+    pathname.startsWith('/ops') ||
+    pathname.startsWith('/team')
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone()

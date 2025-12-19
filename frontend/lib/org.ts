@@ -36,7 +36,18 @@ export async function getUserOrganizations(
     return [];
   }
 
-  return (data ?? []) as OrgMembership[];
+  if (!data) {
+    return [];
+  }
+
+  // Transform the data to match OrgMembership type
+  return data.map((item: any) => ({
+    org_id: item.org_id,
+    role: item.role,
+    organization: Array.isArray(item.organization) && item.organization.length > 0
+      ? item.organization[0]
+      : item.organization,
+  })) as OrgMembership[];
 }
 
 /**
@@ -90,6 +101,46 @@ export async function requireSelectedOrg(user: AuthenticatedUser) {
   }
 
   return selected;
+}
+
+export type OrgMember = {
+  user_id: string;
+  role: string;
+  profile: {
+    id: string;
+    full_name: string | null;
+  };
+};
+
+/**
+ * Gets all members of a specific organization.
+ */
+export async function getOrgMembers(
+  orgId: string
+): Promise<OrgMember[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("org_members")
+    .select("user_id, role, profile:profiles(id, full_name)")
+    .eq("org_id", orgId);
+
+  if (error) {
+    return [];
+  }
+
+  if (!data) {
+    return [];
+  }
+
+  // Transform the data to match OrgMember type
+  return data.map((item: any) => ({
+    user_id: item.user_id,
+    role: item.role,
+    profile: Array.isArray(item.profile) && item.profile.length > 0
+      ? item.profile[0]
+      : item.profile,
+  })) as OrgMember[];
 }
 
 
