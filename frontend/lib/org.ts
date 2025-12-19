@@ -81,6 +81,8 @@ export async function getUserOrganizations(
         org_id: membership.org_id,
         role: membership.role,
         organization: org,
+        // Note: team field is not included in OrgMembership type
+        // as it's only relevant when viewing members of a specific org
       };
     }) as OrgMembership[];
   }
@@ -183,44 +185,79 @@ export async function requireSelectedOrg(user: AuthenticatedUser) {
   return selected;
 }
 
+export type OrgTeam = "tech" | "logistics" | "sponsorship" | "outreach";
+
 export type OrgMember = {
   user_id: string;
   role: string;
+  team: OrgTeam | null;
   profile: {
     id: string;
     full_name: string | null;
   };
+  email?: string; // Email from auth.users (may not always be available)
 };
 
 /**
  * Gets all members of a specific organization.
+ * Fetches org_members and profiles separately to avoid PostgREST foreign key relationship issues.
+ * Note: Email is not directly available via RLS, so we fetch it separately if needed.
  */
 export async function getOrgMembers(
   orgId: string
 ): Promise<OrgMember[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  // Step 1: Get org_members rows
+  const { data: membersData, error: membersError } = await supabase
     .from("org_members")
-    .select("user_id, role, profile:profiles(id, full_name)")
-    .eq("org_id", orgId);
+    .select("user_id, role, team")
+    .eq("org_id", orgId)
+    .order("role", { ascending: true });
 
-  if (error) {
+  if (membersError) {
+    console.error("Error fetching org members:", membersError);
     return [];
   }
 
-  if (!data) {
+  if (!membersData || membersData.length === 0) {
     return [];
   }
 
-  // Transform the data to match OrgMember type
-  return data.map((item: any) => ({
-    user_id: item.user_id,
-    role: item.role,
-    profile: Array.isArray(item.profile) && item.profile.length > 0
-      ? item.profile[0]
-      : item.profile,
-  })) as OrgMember[];
+  // Step 2: Get profiles for all user IDs
+  const userIds = membersData.map((m) => m.user_id);
+  const { data: profilesData, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", userIds);
+
+  if (profilesError) {
+    console.error("Error fetching profiles:", profilesError);
+    // Return members without profile data if profile fetch fails
+    return membersData.map((member) => ({
+      user_id: member.user_id,
+      role: member.role,
+      team: member.team || null,
+      profile: { id: member.user_id, full_name: null },
+    }));
+  }
+
+  // Create a map for quick profile lookup
+  const profileMap = new Map((profilesData || []).map((p) => [p.id, p]));
+
+  // Combine members with profile data
+  return membersData.map((member) => {
+    const profile = profileMap.get(member.user_id) || {
+      id: member.user_id,
+      full_name: null,
+    };
+    return {
+      user_id: member.user_id,
+      role: member.role,
+      team: member.team || null,
+      profile,
+    };
+  }) as OrgMember[];
 }
 
 

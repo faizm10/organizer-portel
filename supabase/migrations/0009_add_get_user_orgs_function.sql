@@ -5,6 +5,7 @@ create or replace function public.get_user_organizations(p_user_id uuid)
 returns table (
   org_id uuid,
   role text,
+  team text,
   org_name text,
   org_slug text
 )
@@ -17,6 +18,7 @@ begin
   select 
     om.org_id,
     om.role,
+    om.team,
     o.name as org_name,
     o.slug as org_slug
   from public.org_members om
