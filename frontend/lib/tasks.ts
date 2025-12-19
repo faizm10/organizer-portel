@@ -181,8 +181,91 @@ export async function getTask(
   }
 }
 
-// Note: createTask functionality has been removed
-// Tasks can only be edited and deleted, not created through the UI
+/**
+ * Creates a new task.
+ */
+export async function createTask(
+  input: CreateTaskInput,
+  orgId?: string
+): Promise<ActionResult<Task>> {
+  try {
+    const supabase = await createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    
+    if (!authData.user) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    const { orgId: resolvedOrgId, error: orgError } = await getOrgId(authData.user.id, orgId, supabase);
+    if (orgError || !resolvedOrgId) {
+      return { success: false, error: orgError || "No organization selected" };
+    }
+
+    // Validation
+    if (!input.title || input.title.trim().length === 0) {
+      return { success: false, error: "Title is required" };
+    }
+
+    if (input.title.length > 500) {
+      return { success: false, error: "Title must be 500 characters or less" };
+    }
+
+    if (input.description && input.description.length > 5000) {
+      return { success: false, error: "Description must be 5000 characters or less" };
+    }
+
+    if (input.status && !["todo", "doing", "done"].includes(input.status)) {
+      return { success: false, error: "Invalid status" };
+    }
+
+    if (input.priority && !["low", "medium", "high"].includes(input.priority)) {
+      return { success: false, error: "Invalid priority" };
+    }
+
+    if (input.assigned_to) {
+      const isMember = await verifyOrgMembership(input.assigned_to, resolvedOrgId, supabase);
+      if (!isMember) {
+        return { success: false, error: "Assigned user must be a member of the organization" };
+      }
+    }
+
+    // Build insert data
+    const insertData: Record<string, unknown> = {
+      org_id: resolvedOrgId,
+      created_by: authData.user.id,
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      status: input.status || "todo",
+      priority: input.priority || null,
+      due_date: input.due_date || null,
+      assigned_to: input.assigned_to || null,
+    };
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: `Failed to create task: ${error.message}` };
+    }
+
+    if (!data) {
+      return { success: false, error: "Task was created but no data was returned" };
+    }
+
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+
+    return { success: true, data: data as Task };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create task",
+    };
+  }
+}
 
 /**
  * Updates an existing task.
