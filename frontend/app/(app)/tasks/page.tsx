@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { requireSelectedOrg, getOrgMembers } from "@/lib/org";
 import { listTasks } from "@/lib/tasks";
 import { CreateTaskForm } from "@/components/create-task-form";
-import { TasksList } from "@/components/tasks-list";
+import { TasksPageContent } from "@/components/tasks-page-content";
 
 export default async function TasksPage() {
   const user = await requireUser();
@@ -38,7 +38,11 @@ export default async function TasksPage() {
         </header>
 
         {tasksResult.success ? (
-          <TasksList tasks={tasks} orgMembers={orgMembers} orgId={org.id} />
+          <TasksPageContent
+            tasks={tasks}
+            orgMembers={orgMembers}
+            orgId={org.id}
+          />
         ) : (
           <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
             {tasksResult.error || "Failed to load tasks"}

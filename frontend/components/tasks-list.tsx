@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { type Task } from "@/lib/tasks";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,11 +17,13 @@ import { EditTaskForm } from "@/components/edit-task-form";
 import { DeleteTaskButton } from "@/components/delete-task-button";
 import { format } from "date-fns";
 import type { OrgMember } from "@/lib/org";
+import type { TaskFilters } from "@/components/tasks-filters";
 
 interface TasksListProps {
   tasks: Task[];
   orgMembers: OrgMember[];
   orgId: string;
+  filters: TaskFilters;
 }
 
 const statusColors = {
@@ -35,7 +38,50 @@ const priorityColors = {
   high: "destructive",
 } as const;
 
-export function TasksList({ tasks, orgMembers, orgId }: TasksListProps) {
+export function TasksList({ tasks, orgMembers, orgId, filters }: TasksListProps) {
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      // Status filter
+      if (filters.statuses.length > 0 && !filters.statuses.includes(task.status)) {
+        return false;
+      }
+
+      // Priority filter
+      if (
+        filters.priorities.length > 0 &&
+        (!task.priority || !filters.priorities.includes(task.priority))
+      ) {
+        return false;
+      }
+
+      // Assigned to filter
+      if (filters.assignedTo.length > 0) {
+        const isUnassigned = !task.assigned_to;
+        const isAssignedToSelected = filters.assignedTo.includes(task.assigned_to || "");
+        const isUnassignedSelected = filters.assignedTo.includes("__unassigned__");
+        
+        if (isUnassigned && !isUnassignedSelected) {
+          return false;
+        }
+        if (!isUnassigned && !isAssignedToSelected) {
+          return false;
+        }
+      }
+
+      // Search filter
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase();
+        const matchesTitle = task.title.toLowerCase().includes(query);
+        const matchesDescription = task.description?.toLowerCase().includes(query) || false;
+        if (!matchesTitle && !matchesDescription) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [tasks, filters]);
+
   if (tasks.length === 0) {
     return (
       <Card>
@@ -54,7 +100,7 @@ export function TasksList({ tasks, orgMembers, orgId }: TasksListProps) {
       <CardHeader>
         <CardTitle>All Tasks</CardTitle>
         <CardDescription>
-          {tasks.length} task{tasks.length !== 1 ? "s" : ""} total
+          {filteredTasks.length} of {tasks.length} task{tasks.length !== 1 ? "s" : ""}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -70,7 +116,14 @@ export function TasksList({ tasks, orgMembers, orgId }: TasksListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.map((task) => (
+            {filteredTasks.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  No tasks match the current filters.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredTasks.map((task) => (
               <TableRow key={task.id}>
                 <TableCell className="font-medium">
                   <div>
@@ -117,7 +170,7 @@ export function TasksList({ tasks, orgMembers, orgId }: TasksListProps) {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )))}
           </TableBody>
         </Table>
       </CardContent>
