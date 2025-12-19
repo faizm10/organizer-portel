@@ -1,14 +1,19 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+"use client";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type DashboardHeaderProps = {
-  orgName: string
-  userEmail: string
-  role?: string
-}
+  orgName: string;
+  userEmail: string;
+  role?: string;
+};
 
 export function DashboardHeader({ orgName, userEmail, role }: DashboardHeaderProps) {
+  const pathname = usePathname();
+
   return (
     <header className="flex flex-col gap-4 border-b border-border/60 pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-2">
@@ -35,20 +40,20 @@ export function DashboardHeader({ orgName, userEmail, role }: DashboardHeaderPro
         aria-label="App navigation"
         className="flex flex-wrap items-center gap-2 text-xs sm:justify-end"
       >
-        <NavLink href="/dashboard" label="Dashboard" />
-        <NavLink href="/tasks" label="Tasks" />
-        <NavLink href="/announcements" label="Announcements" />
-        <NavLink href="/people" label="People" />
-        <NavLink href="/ops" label="Ops HQ" />
+        <NavLink href="/dashboard" label="Dashboard" pathname={pathname} />
+        <NavLink href="/tasks" label="Tasks" pathname={pathname} />
+        <NavLink href="/announcements" label="Announcements" pathname={pathname} />
+        <NavLink href="/people" label="People" pathname={pathname} />
+        <NavLink href="/ops" label="Ops HQ" pathname={pathname} />
         <div className="flex items-center gap-1 rounded-full border border-border/70 px-2 py-1">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.16em]">
             Team
           </span>
           <div className="flex gap-1">
-            <SmallLink href="/team/tech" label="Tech" />
-            <SmallLink href="/team/logistics" label="Logistics" />
-            <SmallLink href="/team/sponsorship" label="Sponsorship" />
-            <SmallLink href="/team/outreach" label="Outreach" />
+            <SmallLink href="/team/tech" label="Tech" pathname={pathname} />
+            <SmallLink href="/team/logistics" label="Logistics" pathname={pathname} />
+            <SmallLink href="/team/sponsorship" label="Sponsorship" pathname={pathname} />
+            <SmallLink href="/team/outreach" label="Outreach" pathname={pathname} />
           </div>
         </div>
         <Button asChild size="sm" className="h-7 rounded-full px-3 text-[11px]">
@@ -56,32 +61,37 @@ export function DashboardHeader({ orgName, userEmail, role }: DashboardHeaderPro
         </Button>
       </nav>
     </header>
-  )
+  );
 }
 
-function NavLink({ href, label }: { href: string; label: string }) {
+function NavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const isActive = pathname === href;
   return (
     <Link
       href={href}
-      className="rounded-full border border-transparent px-3 py-1 text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+      className={`rounded-full border px-3 py-1 transition-colors ${
+        isActive
+          ? "border-border bg-muted text-foreground"
+          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+      }`}
     >
       {label}
     </Link>
-  )
+  );
 }
 
-function SmallLink({ href, label }: { href: string; label: string }) {
+function SmallLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const isActive = pathname === href;
   return (
     <Link
       href={href}
-      className="rounded-full px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className={`rounded-full px-2 py-0.5 text-[11px] transition-colors ${
+        isActive
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
     >
       {label}
     </Link>
-  )
+  );
 }
-
-
-
-
-

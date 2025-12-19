@@ -7,6 +7,8 @@ import { getSelectedOrgIdFromCookie, getUserOrganizations } from "./org";
 export type TaskStatus = "todo" | "doing" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 
+export type TaskTeam = "tech" | "logistics" | "sponsorship" | "outreach";
+
 export type Task = {
   id: string;
   org_id: string;
@@ -17,6 +19,7 @@ export type Task = {
   due_date: string | null;
   created_by: string;
   assigned_to: string | null;
+  team: TaskTeam | null;
   created_at: string;
   updated_at: string;
 };
@@ -28,6 +31,7 @@ export type CreateTaskInput = {
   priority?: TaskPriority;
   due_date?: string;
   assigned_to?: string;
+  team?: TaskTeam;
 };
 
 export type UpdateTaskInput = {
@@ -37,6 +41,7 @@ export type UpdateTaskInput = {
   priority?: TaskPriority;
   due_date?: string | null;
   assigned_to?: string | null;
+  team?: TaskTeam | null;
 };
 
 type ActionResult<T> =
@@ -103,9 +108,9 @@ async function getOrgId(
 }
 
 /**
- * Lists all tasks for the current organization.
+ * Lists all tasks for the current organization, optionally filtered by team.
  */
-export async function listTasks(orgId?: string): Promise<ActionResult<Task[]>> {
+export async function listTasks(orgId?: string, team?: TaskTeam): Promise<ActionResult<Task[]>> {
   try {
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
@@ -119,11 +124,16 @@ export async function listTasks(orgId?: string): Promise<ActionResult<Task[]>> {
       return { success: false, error: orgError || "No organization selected" };
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("tasks")
       .select("*")
-      .eq("org_id", resolvedOrgId)
-      .order("created_at", { ascending: false });
+      .eq("org_id", resolvedOrgId);
+    
+    if (team) {
+      query = query.eq("team", team);
+    }
+    
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
       return { success: false, error: `Failed to fetch tasks: ${error.message}` };
@@ -222,6 +232,10 @@ export async function createTask(
       return { success: false, error: "Invalid priority" };
     }
 
+    if (input.team && !["tech", "logistics", "sponsorship", "outreach"].includes(input.team)) {
+      return { success: false, error: "Invalid team" };
+    }
+
     if (input.assigned_to) {
       const isMember = await verifyOrgMembership(input.assigned_to, resolvedOrgId, supabase);
       if (!isMember) {
@@ -239,6 +253,7 @@ export async function createTask(
       priority: input.priority || null,
       due_date: input.due_date || null,
       assigned_to: input.assigned_to || null,
+      team: input.team || null,
     };
 
     const { data, error } = await supabase
@@ -315,6 +330,10 @@ export async function updateTask(
       return { success: false, error: "Invalid priority" };
     }
 
+    if (input.team !== undefined && input.team !== null && !["tech", "logistics", "sponsorship", "outreach"].includes(input.team)) {
+      return { success: false, error: "Invalid team" };
+    }
+
     if (input.assigned_to !== undefined && input.assigned_to !== null) {
       const isMember = await verifyOrgMembership(input.assigned_to, resolvedOrgId, supabase);
       if (!isMember) {
@@ -330,6 +349,7 @@ export async function updateTask(
     if (input.priority !== undefined) updateData.priority = input.priority;
     if (input.due_date !== undefined) updateData.due_date = input.due_date;
     if (input.assigned_to !== undefined) updateData.assigned_to = input.assigned_to;
+    if (input.team !== undefined) updateData.team = input.team;
 
     const { data, error } = await supabase
       .from("tasks")

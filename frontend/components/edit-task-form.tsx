@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { updateTask, type Task, type UpdateTaskInput, type TaskPriority, type TaskStatus } from "@/lib/tasks";
+import { updateTask, type Task, type UpdateTaskInput, type TaskPriority, type TaskStatus, type TaskTeam } from "@/lib/tasks";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +42,7 @@ const updateTaskSchema = z.object({
   priority: z.enum(["low", "medium", "high"]).optional(),
   due_date: z.string().optional(),
   assigned_to: z.string().uuid().optional(),
+  team: z.enum(["tech", "logistics", "sponsorship", "outreach"]).optional(),
 });
 
 type UpdateTaskFormValues = z.infer<typeof updateTaskSchema>;
@@ -81,6 +82,7 @@ export function EditTaskForm({ task, orgMembers, orgId, trigger }: EditTaskFormP
       priority: task.priority || undefined,
       due_date: formatDateForInput(task.due_date),
       assigned_to: task.assigned_to || undefined,
+      team: task.team || undefined,
     },
   });
 
@@ -94,6 +96,7 @@ export function EditTaskForm({ task, orgMembers, orgId, trigger }: EditTaskFormP
         priority: task.priority || undefined,
         due_date: formatDateForInput(task.due_date),
         assigned_to: task.assigned_to || undefined,
+        team: task.team || undefined,
       });
     }
   }, [task, open, form]);
@@ -115,6 +118,7 @@ export function EditTaskForm({ task, orgMembers, orgId, trigger }: EditTaskFormP
         priority: values.priority ? (values.priority as TaskPriority) : null,
         due_date: dueDate,
         assigned_to: values.assigned_to || null,
+        team: values.team ? (values.team as TaskTeam) : null,
       };
 
       const result = await updateTask(task.id, input, orgId);
@@ -260,41 +264,77 @@ export function EditTaskForm({ task, orgMembers, orgId, trigger }: EditTaskFormP
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="assigned_to"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign To</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === "__unassigned__") {
-                        field.onChange(undefined);
-                      } else {
-                        field.onChange(value);
-                      }
-                    }}
-                    value={field.value ?? "__unassigned__"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team member" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                      {orgMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          {member.profile.full_name || member.user_id}
-                          {member.role && ` (${member.role})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="team"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Team</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === "__none__") {
+                          field.onChange(undefined);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}
+                      value={field.value ?? "__none__"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select team" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">No Team</SelectItem>
+                        <SelectItem value="tech">Tech</SelectItem>
+                        <SelectItem value="logistics">Logistics</SelectItem>
+                        <SelectItem value="sponsorship">Sponsorship</SelectItem>
+                        <SelectItem value="outreach">Outreach</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="assigned_to"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign To</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === "__unassigned__") {
+                          field.onChange(undefined);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}
+                      value={field.value ?? "__unassigned__"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select team member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                        {orgMembers.map((member) => (
+                          <SelectItem key={member.user_id} value={member.user_id}>
+                            {member.profile.full_name || member.user_id}
+                            {member.role && ` (${member.role})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {error && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
