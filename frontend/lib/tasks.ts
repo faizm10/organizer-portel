@@ -50,6 +50,7 @@ type ActionResult<T> =
 
 /**
  * Verifies that the user is a member of the given organization.
+ * Uses the RPC function to avoid RLS recursion issues.
  */
 async function verifyOrgMembership(
   userId: string,
@@ -57,19 +58,27 @@ async function verifyOrgMembership(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<boolean> {
   try {
-    const { data, error } = await supabase
-      .from("org_members")
-      .select("org_id")
-      .eq("user_id", userId)
-      .eq("org_id", orgId)
-      .limit(1);
+    // Use RPC function to bypass RLS recursion
+    const { data, error } = await supabase.rpc("get_user_organizations", {
+      p_user_id: userId,
+    });
 
     if (error) {
-      return false;
+      console.error("[verifyOrgMembership] Error calling RPC:", error);
+      // Fallback: try direct query (may fail with recursion)
+      const { data: fallbackData } = await supabase
+        .from("org_members")
+        .select("org_id")
+        .eq("user_id", userId)
+        .eq("org_id", orgId)
+        .limit(1);
+      return (fallbackData?.length ?? 0) > 0;
     }
 
-    return (data?.length ?? 0) > 0;
-  } catch {
+    // Check if any membership matches the orgId
+    return (data || []).some((membership: any) => membership.org_id === orgId);
+  } catch (error) {
+    console.error("[verifyOrgMembership] Exception:", error);
     return false;
   }
 }

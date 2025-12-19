@@ -68,16 +68,32 @@ export async function listTeamResources(
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error listing team resources:", error);
-      return { success: false, error: error.message };
+      console.error("Error listing team resources:", {
+        error,
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        orgId: resolvedOrgId,
+        team,
+      });
+      return { 
+        success: false, 
+        error: error.message || error.details || error.hint || "Failed to list team resources" 
+      };
     }
 
     return { success: true, data: data || [] };
   } catch (error) {
-    console.error("Error listing team resources:", error);
+    console.error("Error listing team resources (catch):", {
+      error,
+      errorType: typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to list resources",
+      error: error instanceof Error ? error.message : String(error) || "Failed to list resources",
     };
   }
 }
