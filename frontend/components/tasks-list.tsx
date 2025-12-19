@@ -159,9 +159,20 @@ export function TasksList({ tasks, orgMembers, orgId, filters }: TasksListProps)
                   )}
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {task.assigned_to ? "Assigned" : "Unassigned"}
-                  </span>
+                  {task.assigned_to ? (
+                    (() => {
+                      const assignedMember = orgMembers.find(
+                        (m) => m.user_id === task.assigned_to
+                      );
+                      return (
+                        <span className="text-sm">
+                          {assignedMember?.profile.full_name || "Unknown User"}
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Unassigned</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
