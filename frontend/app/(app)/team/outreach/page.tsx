@@ -4,6 +4,8 @@ import { requireSelectedOrg, getOrgMembers } from "@/lib/org";
 import { listTasks } from "@/lib/tasks";
 import { CreateTaskForm } from "@/components/create-task-form";
 import { TasksPageContent } from "@/components/tasks-page-content";
+import { TeamResources } from "@/components/team-resources";
+import { TEAM_RESOURCES } from "@/lib/team-resources";
 
 export default async function OutreachTeamPage() {
   const user = await requireUser();
@@ -43,6 +45,8 @@ export default async function OutreachTeamPage() {
             {tasksResult.error || "Failed to load tasks"}
           </div>
         )}
+
+        <TeamResources resources={TEAM_RESOURCES.outreach} teamName="Outreach" />
       </section>
     </main>
   );
