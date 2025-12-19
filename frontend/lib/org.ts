@@ -81,6 +81,8 @@ export async function getUserOrganizations(
         org_id: membership.org_id,
         role: membership.role,
         organization: org,
+        // Note: team field is not included in OrgMembership type
+        // as it's only relevant when viewing members of a specific org
       };
     }) as OrgMembership[];
   }
@@ -183,9 +185,12 @@ export async function requireSelectedOrg(user: AuthenticatedUser) {
   return selected;
 }
 
+export type OrgTeam = "tech" | "logistics" | "sponsorship" | "outreach";
+
 export type OrgMember = {
   user_id: string;
   role: string;
+  team: OrgTeam | null;
   profile: {
     id: string;
     full_name: string | null;
@@ -206,7 +211,7 @@ export async function getOrgMembers(
   // Step 1: Get org_members rows
   const { data: membersData, error: membersError } = await supabase
     .from("org_members")
-    .select("user_id, role")
+    .select("user_id, role, team")
     .eq("org_id", orgId)
     .order("role", { ascending: true });
 
@@ -232,6 +237,7 @@ export async function getOrgMembers(
     return membersData.map((member) => ({
       user_id: member.user_id,
       role: member.role,
+      team: member.team || null,
       profile: { id: member.user_id, full_name: null },
     }));
   }
@@ -248,6 +254,7 @@ export async function getOrgMembers(
     return {
       user_id: member.user_id,
       role: member.role,
+      team: member.team || null,
       profile,
     };
   }) as OrgMember[];
