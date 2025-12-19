@@ -11,10 +11,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { EditTaskForm } from "@/components/edit-task-form";
+import { DeleteTaskButton } from "@/components/delete-task-button";
 import { format } from "date-fns";
+import type { OrgMember } from "@/lib/org";
 
 interface TasksListProps {
   tasks: Task[];
+  orgMembers: OrgMember[];
+  orgId: string;
 }
 
 const statusColors = {
@@ -29,7 +35,7 @@ const priorityColors = {
   high: "destructive",
 } as const;
 
-export function TasksList({ tasks }: TasksListProps) {
+export function TasksList({ tasks, orgMembers, orgId }: TasksListProps) {
   if (tasks.length === 0) {
     return (
       <Card>
@@ -60,6 +66,7 @@ export function TasksList({ tasks }: TasksListProps) {
               <TableHead>Priority</TableHead>
               <TableHead>Due Date</TableHead>
               <TableHead>Assigned To</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,6 +109,12 @@ export function TasksList({ tasks }: TasksListProps) {
                   <span className="text-sm text-muted-foreground">
                     {task.assigned_to ? "Assigned" : "Unassigned"}
                   </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <EditTaskForm task={task} orgMembers={orgMembers} orgId={orgId} />
+                    <DeleteTaskButton task={task} orgId={orgId} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

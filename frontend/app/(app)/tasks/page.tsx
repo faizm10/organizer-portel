@@ -38,7 +38,7 @@ export default async function TasksPage() {
         </header>
 
         {tasksResult.success ? (
-          <TasksList tasks={tasks} />
+          <TasksList tasks={tasks} orgMembers={orgMembers} orgId={org.id} />
         ) : (
           <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
             {tasksResult.error || "Failed to load tasks"}
