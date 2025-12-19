@@ -1,0 +1,195 @@
+# Cursor Rules for HackPortal Organizer Portal
+
+## Project Overview
+This is a Next.js 16 application with Supabase backend for hackathon organization management.
+
+## Key Technologies
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Database**: Supabase (PostgreSQL)
+- **UI**: React, shadcn/ui components, Tailwind CSS
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+
+## Architecture Patterns
+
+### Server vs Client Components
+- **Server Components** (default): Use for data fetching, authentication checks, and SEO-critical content
+- **Client Components** (`"use client"`): Use for interactivity, forms, state management, browser APIs
+- Always mark interactive components with `"use client"` directive
+- Prefer Server Components when possible for better performance
+
+### Data Fetching
+- Use Server Actions (`"use server"`) for mutations (create, update, delete)
+- Fetch data in Server Components using async/await
+- Use `revalidatePath()` after mutations to refresh cached data
+- Server actions should be in `lib/` directory (e.g., `lib/tasks.ts`, `lib/people.ts`)
+
+### Authentication & Authorization
+- Use `requireUser()` from `lib/auth.ts` in Server Components
+- Use `requireSelectedOrg(user)` to get organization context
+- Organization ID is stored in `hp_org_id` cookie
+- Current RLS policies may be disabled for debugging (check migrations)
+
+## Database & RLS
+
+### Current RLS Status
+- **RLS is currently DISABLED** on all tables for debugging purposes
+- Migration `0010_disable_rls_all_tables.sql` disables RLS on: organizations, profiles, org_members, tasks, team_resources
+- Migration `0012_disable_rls_event_people.sql` disables RLS on: event_people
+- **DO NOT deploy to production with RLS disabled**
+
+### When RLS is Disabled
+- All authenticated users can read/write all data
+- No need to worry about RLS policy recursion issues
+- Can use direct queries without RPC functions (but RPC functions still work)
+- Still respect organization boundaries in application logic
+
+### Re-enabling RLS (Future)
+- Create reverse migrations to re-enable RLS
+- Update RLS policies to fix recursion issues
+- Test thoroughly with actual users
+
+## Code Style
+
+### File Organization
+```
+frontend/
+  app/              # Next.js App Router pages
+  components/       # React components
+  lib/              # Utilities, server actions, helpers
+  hooks/            # Custom React hooks
+supabase/
+  migrations/       # SQL migrations (numbered sequentially)
+```
+
+### Naming Conventions
+- Components: PascalCase (e.g., `CreateTaskForm.tsx`)
+- Functions: camelCase (e.g., `createTask()`, `listTasks()`)
+- Types/Interfaces: PascalCase (e.g., `Task`, `OrgMember`)
+- Files: kebab-case or matching export name
+
+### TypeScript
+- Always use TypeScript for new files
+- Define types/interfaces near their usage
+- Use `type` for unions/primitives, `interface` for objects
+- Export types from `lib/` files for reuse
+
+### Component Patterns
+- Use shadcn/ui components from `components/ui/`
+- Forms: Use `react-hook-form` with `zod` validation
+- Dialogs: Use `Dialog` component for modals
+- Lists: Use Card-based grids for item lists
+- Use `toast` from `sonner` for notifications
+- Use `router.refresh()` after mutations to update UI
+
+## Database Migrations
+
+### Creating Migrations
+- Number sequentially: `0011_`, `0012_`, etc.
+- Use descriptive names with underscores
+- Include comments explaining the change
+- Test migrations on local/dev before production
+
+### Migration Guidelines
+- Use `IF NOT EXISTS` / `IF EXISTS` for idempotency
+- Always include rollback considerations in comments
+- Document why RLS is disabled if applicable
+- Include indexes for performance-critical queries
+
+## Common Patterns
+
+### Server Actions Pattern
+```typescript
+"use server";
+
+export async function createItem(input: CreateItemInput): Promise<ActionResult<Item>> {
+  const user = await requireUser();
+  const orgId = await getSelectedOrgIdFromCookie();
+  // ... implementation
+  revalidatePath("/items");
+  return { success: true, data };
+}
+```
+
+### Client Component Pattern
+```typescript
+"use client";
+
+export function ItemForm({ orgId }: { orgId: string }) {
+  const router = useRouter();
+  const form = useForm({ resolver: zodResolver(schema) });
+  
+  const onSubmit = async (data) => {
+    const result = await createItem(data, orgId);
+    if (result.success) {
+      toast.success("Item created");
+      router.refresh();
+    }
+  };
+  // ... render
+}
+```
+
+### Error Handling
+- Server actions return `ActionResult<T>` with `success` boolean
+- Show user-friendly error messages using `toast.error()`
+- Log detailed errors to console for debugging
+- Never expose internal errors to users
+
+## Testing & Debugging
+
+### Console Logging
+- Use prefixed logs: `[FunctionName] Message`
+- Log important state changes and errors
+- Include relevant context (user ID, org ID, etc.)
+- Remove excessive logging before production
+
+### Common Issues
+- **RLS Recursion**: If RLS is enabled and queries fail, check for circular policy dependencies
+- **Cookie Issues**: Server Components can't set cookies directly (use Server Actions or Route Handlers)
+- **Redirect Loops**: Don't catch `redirect()` errors; let Next.js handle them
+- **Type Errors**: Ensure types match between server/client boundaries
+
+## Key Files Reference
+
+### Core Libraries
+- `lib/auth.ts` - Authentication helpers (`requireUser()`)
+- `lib/org.ts` - Organization helpers (`requireSelectedOrg()`, `getOrgMembers()`)
+- `lib/tasks.ts` - Task CRUD operations
+- `lib/people.ts` - Event people CRUD operations
+- `lib/team-resources-db.ts` - Team resources CRUD operations
+
+### Important Migrations
+- `0001_hackportal_schema.sql` - Core schema (organizations, profiles, org_members)
+- `0003_tasks_table.sql` - Tasks table
+- `0005_team_resources.sql` - Team resources table
+- `0008_add_org_members_insert_policy.sql` - INSERT policy for org_members
+- `0009_add_get_user_orgs_function.sql` - RPC function to bypass RLS recursion
+- `0010_disable_rls_all_tables.sql` - Disables RLS on all tables
+- `0011_event_people_table.sql` - Event people table
+- `0012_disable_rls_event_people.sql` - Disables RLS on event_people
+
+### UI Components
+- `components/ui/` - shadcn/ui components
+- `components/create-task-form.tsx` - Task creation form
+- `components/people-list.tsx` - People display component
+- `components/create-person-form.tsx` - Add person form
+
+## Best Practices
+
+1. **Always check authentication** in Server Components using `requireUser()`
+2. **Always check organization membership** using `requireSelectedOrg()`
+3. **Revalidate paths** after mutations to keep UI in sync
+4. **Use type-safe server actions** with proper TypeScript types
+5. **Handle errors gracefully** with user-friendly messages
+6. **Test with actual data** before marking features complete
+7. **Document temporary solutions** (like disabled RLS) with clear comments
+8. **Keep migrations sequential** and well-documented
+
+## RLS Status Summary
+⚠️ **CURRENTLY DISABLED FOR DEBUGGING**
+- All tables have RLS disabled via migrations 0010 and 0012
+- This allows easier development and debugging
+- Must re-enable before production deployment
+- Application logic still respects organization boundaries
