@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createTask, type CreateTaskInput, type TaskPriority, type TaskStatus } from "@/lib/tasks";
+import { createTask, type CreateTaskInput, type TaskPriority, type TaskStatus, type TaskTeam } from "@/lib/tasks";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +43,7 @@ const createTaskSchema = z.object({
   priority: z.enum(["low", "medium", "high"]).optional(),
   due_date: z.string().optional(),
   assigned_to: z.string().uuid().optional(),
+  team: z.enum(["tech", "logistics", "sponsorship", "outreach"]).optional(),
 });
 
 type CreateTaskFormValues = z.infer<typeof createTaskSchema>;
@@ -50,10 +51,11 @@ type CreateTaskFormValues = z.infer<typeof createTaskSchema>;
 interface CreateTaskFormProps {
   orgMembers: OrgMember[];
   orgId: string;
+  defaultTeam?: TaskTeam;
   trigger?: React.ReactNode;
 }
 
-export function CreateTaskForm({ orgMembers, orgId, trigger }: CreateTaskFormProps) {
+export function CreateTaskForm({ orgMembers, orgId, defaultTeam, trigger }: CreateTaskFormProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +70,26 @@ export function CreateTaskForm({ orgMembers, orgId, trigger }: CreateTaskFormPro
       priority: undefined,
       due_date: undefined,
       assigned_to: undefined,
+      team: defaultTeam || undefined,
     },
   });
+
+  // Reset form with default team when dialog opens
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (newOpen) {
+      form.reset({
+        title: "",
+        description: "",
+        status: "todo",
+        priority: undefined,
+        due_date: undefined,
+        assigned_to: undefined,
+        team: defaultTeam || undefined,
+      });
+      setError(null);
+    }
+  };
 
   const onSubmit = async (values: CreateTaskFormValues) => {
     setIsLoading(true);
@@ -88,6 +108,7 @@ export function CreateTaskForm({ orgMembers, orgId, trigger }: CreateTaskFormPro
         priority: values.priority ? (values.priority as TaskPriority) : undefined,
         due_date: dueDate,
         assigned_to: values.assigned_to || undefined,
+        team: values.team ? (values.team as TaskTeam) : undefined,
       };
 
       const result = await createTask(input, orgId);
@@ -109,7 +130,7 @@ export function CreateTaskForm({ orgMembers, orgId, trigger }: CreateTaskFormPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || <Button>Create Task</Button>}
       </DialogTrigger>
@@ -235,41 +256,77 @@ export function CreateTaskForm({ orgMembers, orgId, trigger }: CreateTaskFormPro
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="assigned_to"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign To</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === "__unassigned__") {
-                        field.onChange(undefined);
-                      } else {
-                        field.onChange(value);
-                      }
-                    }}
-                    value={field.value ?? "__unassigned__"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team member" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__unassigned__">Unassigned</SelectItem>
-                      {orgMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          {member.profile.full_name || member.user_id}
-                          {member.role && ` (${member.role})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="team"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Team</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === "__none__") {
+                          field.onChange(undefined);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}
+                      value={field.value ?? "__none__"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select team" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">No Team</SelectItem>
+                        <SelectItem value="tech">Tech</SelectItem>
+                        <SelectItem value="logistics">Logistics</SelectItem>
+                        <SelectItem value="sponsorship">Sponsorship</SelectItem>
+                        <SelectItem value="outreach">Outreach</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="assigned_to"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign To</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value === "__unassigned__") {
+                          field.onChange(undefined);
+                        } else {
+                          field.onChange(value);
+                        }
+                      }}
+                      value={field.value ?? "__unassigned__"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select team member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                        {orgMembers.map((member) => (
+                          <SelectItem key={member.user_id} value={member.user_id}>
+                            {member.profile.full_name || member.user_id}
+                            {member.role && ` (${member.role})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {error && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
